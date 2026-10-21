@@ -1,0 +1,22 @@
+# Useful next steps
+
+- [x] Excel (.xlsx) template download, import preview, validation, duplicate checks, and selected-row import.
+- [ ] Import JSON backups and CSV exports from other trackers, with preview and duplicate checks.
+- [ ] Detect duplicate company/role/URL combinations before saving.
+- [ ] Browser share target or extension to capture postings from LinkedIn, Naukri, and WhatsApp Web.
+- [ ] Paste a posting and extract company, role, technologies, and contact details for review.
+- [ ] Application activity timeline with contact history and status changes.
+- [ ] Follow-up reminders, snooze, and calendar export.
+- [ ] Resume and cover-letter versions attached to each application.
+- [ ] Interview rounds, preparation notes, questions, and calendar scheduling.
+- [ ] Kanban view and bulk updates.
+- [ ] Search conversion trends by source, technology, and week.
+- [ ] Contact directory and referral relationships.
+- [ ] Offer comparisons: compensation, location, benefits, and deadlines.
+- [ ] Automatic scheduled database backups and restore verification.
+- [ ] Authentication and encrypted backups before any shared or remote deployment.
+- [x] Gmail OAuth, explicit send review, attachment library, and send history.
+- [ ] Optional reply synchronization (would require additional Gmail permissions).
+- [x] Resume-based default templates, signatures, and draft editing.
+- [ ] Template categories and saved draft history.
+- [ ] Automated end-to-end tests with a disposable MongoDB database.
