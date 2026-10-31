@@ -279,3 +279,15 @@ TODO.md                      Planned features
 ## License
 
 [MIT](LICENSE). Copyright (c) 2026 Vandan Sojitra.
+
+### Application deletion and conversation notes
+
+Use the trash icon in the application list, **Delete application** in the details view, or **Delete** in the editor. Confirm the company and role before deleting. Deletion permanently removes that application and its timeline notes; shared attachments and sent email history are retained.
+
+For a company that has replied, select its **Received** checkbox and open its details. In **Conversation timeline**, choose the conversation date and time, enter a note, and select **Add timeline note**. Entries persist with the application and appear newest first in your local timezone. You can backdate recruiter calls or interviews. Clearing the reply checkbox keeps existing notes visible. Timeline notes are also included in JSON backups.
+
+### Kanban board
+
+Open **Applications** and choose **Kanban** beside **Table**. Drag a card into Saved, Applied, Interview, Offer, Rejected, or Withdrawn to save its stage. The **Move to** menu on each card supports keyboard and touch use. Moving into Applied sets the applied date only if none exists. Your view preference is remembered in this browser.
+
+Search, reply filters, and stage filters apply to both views. Choose **All applications** to see the whole pipeline. Each column shows its matching count and lets you add an application directly into that stage. Select a card's company to view details or use its mail button to open Email studio. Scroll horizontally to reach all six stages.

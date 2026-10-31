@@ -8,7 +8,8 @@ const jobSchema = new mongoose.Schema({
   company: {type:String,required:true,trim:true}, role:{type:String,required:true,trim:true}, description:String,
   tags:[String], email:String, contact:String, url:String, source:String, location:String, workMode:{type:String,enum:['',...workModes],default:''}, salary:String,
   status:{type:String,enum:statuses,default:'Saved'}, replied:{type:Boolean,default:false},
-  appliedAt:Date, followUpAt:Date, notes:String, importBatchId:String, importRow:Number
+  appliedAt:Date, followUpAt:Date, notes:String, importBatchId:String, importRow:Number,
+  timeline:[{body:{type:String,required:true,trim:true,maxlength:5000},occurredAt:{type:Date,required:true},createdAt:{type:Date,default:Date.now}}]
 }, {timestamps:true});
 const templateSchema = new mongoose.Schema({name:{type:String,required:true},subject:{type:String,default:''},body:{type:String,default:''},defaultKey:{type:String,unique:true,sparse:true}}, {timestamps:true});
 const settingsSchema = new mongoose.Schema({_id:String,variables:{type:Map,of:String},resumeDefaultsVersion:String,starterDefaultsVersion:String,profileLinksVersion:String});
@@ -23,8 +24,19 @@ app.use('/api/job-import',createJobImportRouter({Job}));
 const route = fn => (req,res,next) => Promise.resolve(fn(req,res,next)).catch(next);
 app.get('/api/health', (req,res) => res.status(mongoose.connection.readyState === 1 ? 200 : 503).json({ready:mongoose.connection.readyState === 1}));
 app.get('/api/jobs',route(async(req,res)=>res.json(await Job.find().sort({createdAt:-1}))));
-app.post('/api/jobs',route(async(req,res)=>{const error=validateJob(req.body);if(error)return res.status(400).json({error});res.status(201).json(await Job.create(req.body));}));
-app.put('/api/jobs/:id',route(async(req,res)=>{const error=validateJob(req.body);if(error)return res.status(400).json({error});const job=await Job.findByIdAndUpdate(req.params.id,{$set:req.body},{new:true,runValidators:true});res.status(job?200:404).json(job||{error:'Job not found'});}));
+// Timeline entries belong to the append endpoint: stale editor payloads must never replace them.
+const jobFields=body=>Object.fromEntries(['company','role','description','tags','email','contact','url','source','location','workMode','salary','status','replied','appliedAt','followUpAt','notes'].filter(key=>Object.hasOwn(body,key)).map(key=>[key,body[key]]));
+app.post('/api/jobs',route(async(req,res)=>{const error=validateJob(req.body);if(error)return res.status(400).json({error});res.status(201).json(await Job.create(jobFields(req.body)));}));
+app.put('/api/jobs/:id',route(async(req,res)=>{const error=validateJob(req.body);if(error)return res.status(400).json({error});const job=await Job.findByIdAndUpdate(req.params.id,{$set:jobFields(req.body)},{new:true,runValidators:true});res.status(job?200:404).json(job||{error:'Job not found'});}));
+app.post('/api/jobs/:id/timeline',route(async(req,res)=>{
+ const {body,occurredAt}=req.body;
+ if(typeof body!=='string'||!body.trim()||body.trim().length>5000)return res.status(400).json({error:'Enter a note between 1 and 5,000 characters.'});
+ if(typeof occurredAt!=='string'||!occurredAt.trim()||Number.isNaN(Date.parse(occurredAt)))return res.status(400).json({error:'Choose a valid date and time.'});
+ const job=await Job.findOneAndUpdate({_id:req.params.id,replied:true},{$push:{timeline:{body:body.trim(),occurredAt:new Date(occurredAt)}}},{new:true,runValidators:true});
+ if(job)return res.status(201).json(job);
+ const exists=await Job.exists({_id:req.params.id});
+ res.status(exists?409:404).json({error:exists?'Mark this company as replied before adding a timeline note.':'Job not found'});
+}));
 app.delete('/api/jobs/:id',route(async(req,res)=>{const job=await Job.findByIdAndDelete(req.params.id);res.status(job?200:404).json(job?{ok:true}:{error:'Job not found'});}));
 app.get('/api/templates',route(async(req,res)=>res.json(await Template.find().sort({createdAt:-1}))));
 app.post('/api/templates',route(async(req,res)=>{if(!req.body.name?.trim())return res.status(400).json({error:'Template name is required.'});res.status(201).json(await Template.create({...req.body,body:ensureProfileLinks(req.body.body)}));}));

@@ -9,7 +9,7 @@
 - [ ] Follow-up reminders, snooze, and calendar export.
 - [ ] Resume and cover-letter versions attached to each application.
 - [ ] Interview rounds, preparation notes, questions, and calendar scheduling.
-- [ ] Kanban view and bulk updates.
+- [ ] Bulk application updates.
 - [ ] Search conversion trends by source, technology, and week.
 - [ ] Contact directory and referral relationships.
 - [ ] Offer comparisons: compensation, location, benefits, and deadlines.
@@ -20,3 +20,6 @@
 - [x] Resume-based default templates, signatures, and draft editing.
 - [ ] Template categories and saved draft history.
 - [ ] Automated end-to-end tests with a disposable MongoDB database.
+- [x] Delete applications from the list, details view, or editor with confirmation.
+- [x] Dated conversation notes for replied applications, preserved when the reply flag is cleared.
+- [x] Kanban application board with drag-and-drop stages, keyboard/touch stage menus, shared filters, and saved view preference.
