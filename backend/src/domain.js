@@ -1,10 +1,10 @@
-export const statuses = ['Saved', 'Applied', 'Interview', 'Offer', 'Rejected', 'Withdrawn'];
+export const statuses = ['Saved', 'Applied', 'Screening', 'Interview', 'Offer', 'Accepted', 'Rejected', 'Declined', 'Withdrawn'];
 export const workModes = ['Remote', 'Hybrid', 'On-site'];
 export function renderTemplate(text, variables) {
   return text.replace(/\{\{\s*([\w-]+)\s*\}\}/g, (match, key) => variables[key] ?? match);
 }
 export function validateJob(body) {
-  if (!body.company?.trim() || !body.role?.trim()) return 'Company and role are required.';
+  if (typeof body.company !== 'string' || typeof body.role !== 'string' || !body.company.trim() || !body.role.trim()) return 'Company and role are required.';
   if (body.status && !statuses.includes(body.status)) return 'Invalid application status.';
   if (body.workMode && !workModes.includes(body.workMode)) return 'Invalid work arrangement.';
   if (['Hybrid', 'On-site'].includes(body.workMode) && (typeof body.location !== 'string' || !body.location.trim())) return 'City is required for Hybrid and On-site positions.';

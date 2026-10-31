@@ -1,6 +1,6 @@
 # Connect your Gmail account
 
-The dashboard uses Google's server-side OAuth flow, the Gmail API, and the `gmail.send` scope. It also requests OpenID/email identity to show the connected sender. It does not request inbox-reading permissions or your Gmail password.
+The dashboard uses Google's server-side OAuth flow, the Gmail API, and the `gmail.send` scope. It also requests OpenID/email identity to show the connected sender. Send-only is the default. Optional inbox-reading and Calendar permissions can be selected explicitly in Settings. The app never asks for your Gmail password.
 
 ## One-time Google configuration
 
@@ -45,7 +45,7 @@ The **Mail app (no files)** button opens a handoff screen. Download any selected
 ## Connection and storage
 
 - OAuth access/refresh tokens are encrypted using AES-256-GCM in MongoDB; the key and Google client secret stay in the backend environment.
-- Attachments are stored as binary data in MongoDB, so they persist under this project's existing bind-mounted database directory. JSON exports omit attachments, OAuth tokens, and send history; use a database backup to preserve attachments/history. Keep `.env` separately protected if backing up the database.
+- Attachments are stored as binary data in MongoDB, so they persist under this project's existing bind-mounted database directory. Full workspace JSON exports include attachment bytes and send history, but exclude OAuth tokens. Use a database backup to preserve encrypted OAuth records. Keep `.env` separately protected if backing up the database.
 - Connection requests use state, browser-bound HttpOnly cookies, and PKCE. Sensitive changes require a same-origin custom request header. Sending uses a unique request identifier to prevent retrying the same message twice.
 - A timeout, lost connection, or Gmail server error may leave the send result uncertain. Check Gmail **Sent** before initiating a new send. The dashboard never retries a send automatically.
 - Disconnect revokes authorization where possible and removes the locally stored tokens. If Google cannot be reached, remove the app from your [Google account connections](https://myaccount.google.com/connections) too.
@@ -62,3 +62,13 @@ The **Mail app (no files)** button opens a handoff screen. Download any selected
 - **Gmail rejected the email:** confirm Gmail API enablement, permissions, account limits, recipient, and attachment sizes. Reopen review to create a new send only after checking the result.
 
 References: [Google OAuth web-server flow](https://developers.google.com/identity/protocols/oauth2/web-server), [Gmail send scopes](https://developers.google.com/workspace/gmail/api/auth/scopes), [MIME and attachment sending](https://developers.google.com/workspace/gmail/api/guides/sending).
+
+## Optional replies and Calendar
+
+To use Inbox, add `https://www.googleapis.com/auth/gmail.readonly` to your Google consent configuration. To synchronize interviews, enable the **Google Calendar API** in the same project and add `https://www.googleapis.com/auth/calendar.events`.
+
+In **Settings → Gmail & Google Calendar**, select only the additional permissions you want and choose **Connect Google**. Complete Google consent yourself. An existing send-only connection retains its permissions until you reconnect.
+
+**Inbox → Check Gmail replies** loads up to 20 recent inbox messages. Choose an application and select **Mark replied & add to timeline** to link a message once. Replies are drafted in Email studio and still require the normal send review.
+
+**Calendar → Sync Google Calendar** exchanges timed events with your primary calendar, using the latest edit when both have the same event. Imports cover the preceding week and next 90 days, up to 100 events. All-day events, deletions, recurring-series management and availability suggestions are not synchronized. Local calendar editing and ICS export work without Google.

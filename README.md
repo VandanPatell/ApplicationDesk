@@ -4,6 +4,8 @@ Application Desk is a self-hosted MERN dashboard for organizing a personal job s
 
 Repository: [VandanPatell/ApplicationDesk](https://github.com/VandanPatell/ApplicationDesk)
 
+The Dossier-inspired redesign is developed on `codex/dossier-inspired-portal`. After cloning, run `git switch codex/dossier-inspired-portal` to evaluate this version.
+
 ## Features
 
 - Job records with company, role, description, technology tags, contacts, posting URL, source, salary, and notes.
@@ -14,9 +16,15 @@ Repository: [VandanPatell/ApplicationDesk](https://github.com/VandanPatell/Appli
 - Excel `.xlsx` import with a downloadable template, preview, row validation, duplicate checks, and selected-row import.
 - Six editable starter email templates, shared candidate variables, portfolio/resume links, and editable drafts.
 - Optional Gmail OAuth connection, reviewed sending, attachments, and send history.
-- Reusable attachment library and JSON export of jobs, templates, and variables.
+- Reusable attachment library, full JSON backup/merge restore, and optional scheduled local backups.
+- Career profile with resume import, document studio, twelve resume themes, revision history, and PDF generation.
+- Keyword fit/gaps, pasted-posting capture, public job discovery, a daily search agent, interviews and calendar.
+- Optional AI adapters, Gmail inbox linking, Google Calendar synchronization and single-password access.
+- Paper-inspired light/dark workspace with a funnel and weekly activity dashboard.
 
-This is a single-user application without login/authentication. The default installation is available only on your own computer. Do not expose it publicly without adding authentication and HTTPS.
+See [the Dossier-inspired feature guide](docs/DOSSIER_FEATURES.md) for the comparison, optional setup and limitations.
+
+This is a single-user application. The default installation is available only on your own computer. Optional password protection is available; enable it and HTTPS before any network exposure.
 
 ## Stack and services
 
@@ -126,7 +134,7 @@ Follow the full [Gmail setup guide](docs/GMAIL_SETUP.md). In brief:
 
 6. Open **Email studio**, select **Connect Gmail**, and complete Google sign-in/consent yourself.
 
-The integration requests send-only Gmail access plus Google email identity. It does not request inbox-reading access. Connecting does not send an email. Every send requires draft review and confirmation.
+Email studio requests send-only Gmail access plus Google email identity. Optional inbox-reading and Calendar permissions can be selected in Settings when reconnecting. Connecting does not send an email. Every send requires draft review and confirmation.
 
 ## Daily use
 
@@ -167,7 +175,7 @@ data/mongo-config/   MongoDB configuration directory
 
 The database, `.env`, private outputs/screenshots, and backups are excluded from Git. A clone starts a separate personal workspace, not a copy of another user's data. Stopping containers does not delete these directories.
 
-**Export backup** downloads JSON with jobs, templates, and variables. It excludes attachment bytes, OAuth credentials, and send history, and JSON restore is not implemented yet. For a full database backup, with services running:
+**Export backup** now downloads a full workspace JSON including profile, documents/revisions, interviews, job discoveries, templates, variables, mail history and attachment bytes. OAuth credentials and API keys are excluded. Settings provides preview and confirmation for a merge-only restore that preserves existing records. Optional daily JSON backups are stored in `data/backups`. See [backup limits and behavior](docs/DOSSIER_FEATURES.md#data-protection). For a full database backup including encrypted OAuth records, with services running:
 
 ```sh
 mkdir backups

@@ -4,7 +4,7 @@ import crypto from 'node:crypto';
 import multer from 'multer';
 import {OAuth2Client} from 'google-auth-library';
 import {encrypt,decrypt,validateDraft,createRawMessage,MAX_ATTACHMENT_BYTES,MAX_TOTAL_BYTES} from './mail-utils.js';
-const authSchema=new mongoose.Schema({_id:String,email:String,credentials:String,reconnect:{type:Boolean,default:false}});
+const authSchema=new mongoose.Schema({_id:String,email:String,credentials:String,scopes:[String],reconnect:{type:Boolean,default:false}});
 const attachmentSchema=new mongoose.Schema({name:String,mimeType:String,size:Number,data:{type:Buffer,select:false}}, {timestamps:true});
 const sentSchema=new mongoose.Schema({requestId:{type:String,unique:true},jobId:{type:mongoose.Schema.Types.ObjectId,ref:'Job'},to:String,subject:String,from:String,attachments:[String],state:{type:String,enum:['sending','sent','failed','unknown']},googleMessageId:String,sentAt:Date}, {timestamps:true});
 export const GmailAccount=mongoose.model('GmailAccount',authSchema);
@@ -21,16 +21,17 @@ export function createMailRouter({Job,oauthFactory,googleFetch=fetch}={}){
   if(!['GET','HEAD','OPTIONS'].includes(req.method)&&(req.get('X-Requested-With')!=='ApplicationDesk'||(req.get('Origin')&&req.get('Origin')!==config().origin)))return res.status(403).json({error:'This action must be made from the dashboard.'});
   next();
  });
- router.get('/gmail/status',route(async(req,res)=>{const account=await GmailAccount.findById('personal').select('email reconnect');res.json({configured:configured(),connected:!!account&&!account.reconnect&&configured(),email:account?.email||'',reconnect:!!account?.reconnect});}));
+ router.get('/gmail/status',route(async(req,res)=>{const account=await GmailAccount.findById('personal').select('email reconnect scopes');res.json({scopes:account?.scopes||[],configured:configured(),connected:!!account&&!account.reconnect&&configured(),email:account?.email||'',reconnect:!!account?.reconnect});}));
  router.post('/gmail/connect',route(async(req,res)=>{
   if(!configured())return res.status(503).json({error:'Gmail setup is required. Follow docs/GMAIL_SETUP.md to configure Google OAuth credentials.'});
   for(const [key,value] of states)if(value.expires<Date.now())states.delete(key);
   if(states.size>50)return res.status(429).json({error:'Too many connection attempts. Try again later.'});
   const state=crypto.randomBytes(32).toString('hex'),binding=crypto.randomBytes(32).toString('hex');
   const oauth=client(),{codeVerifier,codeChallenge}=await oauth.generateCodeVerifierAsync();
-  states.set(state,{binding,codeVerifier,expires:Date.now()+600000});
+  const scopes=['openid','email','https://www.googleapis.com/auth/gmail.send',...(req.body?.readInbox===true?['https://www.googleapis.com/auth/gmail.readonly']:[]),...(req.body?.calendar===true?['https://www.googleapis.com/auth/calendar.events']:[])];
+  states.set(state,{binding,codeVerifier,scopes,expires:Date.now()+600000});
   res.cookie('gmail_oauth',binding,{httpOnly:true,sameSite:'lax',secure:config().origin.startsWith('https:'),path:'/api/gmail',maxAge:600000});
-  res.json({url:oauth.generateAuthUrl({access_type:'offline',prompt:'consent',scope:['openid','email','https://www.googleapis.com/auth/gmail.send'],state,code_challenge:codeChallenge,code_challenge_method:'S256'})});
+  res.json({url:oauth.generateAuthUrl({access_type:'offline',prompt:'consent',scope:scopes,state,code_challenge:codeChallenge,code_challenge_method:'S256'})});
  }));
  router.get('/gmail/callback',route(async(req,res)=>{
   const state=typeof req.query.state==='string'?req.query.state:'';
@@ -44,9 +45,55 @@ export function createMailRouter({Job,oauthFactory,googleFetch=fetch}={}){
    if(!tokens.scope?.split(' ').includes('https://www.googleapis.com/auth/gmail.send')||!tokens.refresh_token||!tokens.id_token)throw Error('Incomplete consent');
    const ticket=await oauth.verifyIdToken({idToken:tokens.id_token,audience:config().id});
    const identity=ticket.getPayload();if(!identity?.email_verified||!identity.email)throw Error('Email not verified');
-   await GmailAccount.findByIdAndUpdate('personal',{email:identity.email,credentials:encrypt(tokens,config().key),reconnect:false},{upsert:true});
+   await GmailAccount.findByIdAndUpdate('personal',{email:identity.email,credentials:encrypt(tokens,config().key),scopes:tokens.scope?.split(' ')||[],reconnect:false},{upsert:true});
    return res.redirect('/?gmail=connected');
   }catch{return res.redirect('/?gmail=failed');}
+ }));
+ async function googleAccess(scope){
+  if(!configured())throw Object.assign(Error('Configure Google OAuth in .env and connect from Settings first.'),{status:400});
+  const account=await GmailAccount.findById('personal');
+  if(!account||account.reconnect)throw Object.assign(Error('Connect Google from Settings first.'),{status:400});
+  const oauth=client(),tokens=decrypt(account.credentials,config().key);
+  if(!tokens.scope?.split(' ').includes(scope))throw Object.assign(Error('This connection does not have the required permission. Select it in Settings and reconnect Google.'),{status:400});
+  oauth.setCredentials(tokens);const access=(await oauth.getAccessToken()).token;if(!access)throw Object.assign(Error('Reconnect Google to refresh access.'),{status:400});
+  await GmailAccount.updateOne({_id:'personal'},{credentials:encrypt(oauth.credentials,config().key)});return access;
+ }
+ async function googleJSON(url,access,method='GET',body){
+  const response=await googleFetch(url,{method,headers:{Authorization:'Bearer '+access,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(30000)});
+  if(!response.ok)throw Object.assign(Error('Google returned HTTP '+response.status+'. Check your connection and try again.'),{status:400});return response.json();
+ }
+ const messageText=part=>{if(part.mimeType==='text/plain'&&part.body?.data)return Buffer.from(part.body.data,'base64url').toString('utf8');return (part.parts||[]).map(messageText).filter(Boolean).join('\n');};
+ function readableMessage(data,jobs){const headers=Object.fromEntries((data.payload?.headers||[]).map(header=>[header.name.toLowerCase(),header.value]));const email=headers.from?.match(/[\w.+-]+@[\w.-]+\.[a-z]{2,}/i)?.[0]?.toLowerCase();return {id:data.id,from:headers.from,subject:headers.subject,date:new Date(Number(data.internalDate)).toISOString(),snippet:data.snippet,body:messageText(data.payload||{}).slice(0,20000),jobId:jobs.find(job=>job.email?.trim().toLowerCase()===email)?._id};}
+ router.get('/gmail/inbox',route(async(req,res)=>{
+  const access=await googleAccess('https://www.googleapis.com/auth/gmail.readonly');
+  const list=await googleJSON('https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=20&q='+encodeURIComponent('in:inbox newer_than:90d'),access),jobs=await Job.find().select('email');
+  const output=[];for(let index=0;index<(list.messages||[]).length;index+=5){const batch=list.messages.slice(index,index+5);output.push(...await Promise.all(batch.map(async item=>readableMessage(await googleJSON('https://gmail.googleapis.com/gmail/v1/users/me/messages/'+encodeURIComponent(item.id)+'?format=full',access),jobs))));}res.json(output);
+ }));
+ router.post('/gmail/inbox/:id/link',route(async(req,res)=>{
+  const job=await Job.findById(req.body.jobId);if(!job)return res.status(404).json({error:'Application not found.'});
+  const access=await googleAccess('https://www.googleapis.com/auth/gmail.readonly'),data=await googleJSON('https://gmail.googleapis.com/gmail/v1/users/me/messages/'+encodeURIComponent(req.params.id)+'?format=full',access),message=readableMessage(data,[]);
+  const marker='Gmail message: '+message.id;
+  const note={body:marker+'\nFrom: '+message.from+'\nSubject: '+message.subject+'\n\n'+(message.body||message.snippet||'').slice(0,3500),occurredAt:new Date(message.date)};
+  await Job.updateOne({_id:job._id},{$set:{replied:true}});await Job.updateOne({_id:job._id,'timeline.gmailMessageId':{$ne:message.id}},{$push:{timeline:{...note,body:note.body.slice(0,5000),gmailMessageId:message.id}}},{runValidators:true});res.json({ok:true});
+ }));
+ router.post('/google/calendar/sync',route(async(req,res)=>{
+  const access=await googleAccess('https://www.googleapis.com/auth/calendar.events'),Model=mongoose.models.Interview;
+  const url=new URL('https://www.googleapis.com/calendar/v3/calendars/primary/events');url.searchParams.set('timeMin',new Date(Date.now()-7*86400000).toISOString());url.searchParams.set('timeMax',new Date(Date.now()+90*86400000).toISOString());url.searchParams.set('singleEvents','true');url.searchParams.set('maxResults','100');
+  const remote=await googleJSON(url,access);let pulled=0,pushed=0;
+  for(const event of remote.items||[]){
+   if(event.status==='cancelled'||!event.start?.dateTime||!event.end?.dateTime)continue;
+   const local=await Model.findOne({googleId:event.id});
+   if(!local||new Date(event.updated)>new Date(local.updatedAt)){
+    await Model.findOneAndUpdate({googleId:event.id},{$set:{title:event.summary||'Calendar event',start:new Date(event.start.dateTime),end:new Date(event.end.dateTime),location:event.location||'',notes:(event.description||'').slice(0,10000),googleSyncedAt:new Date()},$setOnInsert:{kind:'Other'}},{upsert:true});pulled++;
+   }
+  }
+  const upcoming=await Model.find({end:{$gte:new Date(Date.now()-7*86400000)}});
+  for(const event of upcoming){
+   if(event.googleId&&event.googleSyncedAt&&new Date(event.updatedAt)<=new Date(event.googleSyncedAt.getTime()+1000))continue;
+   const body={summary:event.title,start:{dateTime:event.start.toISOString()},end:{dateTime:event.end.toISOString()},location:event.location||event.meetingUrl,description:[event.notes,event.meetingUrl].filter(Boolean).join('\n'),extendedProperties:{private:{applicationDeskId:String(event._id)}}};
+   const saved=await googleJSON('https://www.googleapis.com/calendar/v3/calendars/primary/events'+(event.googleId?'/'+encodeURIComponent(event.googleId):''),access,event.googleId?'PUT':'POST',body);await Model.updateOne({_id:event._id},{googleId:saved.id,googleSyncedAt:new Date()});pushed++;
+  }
+  res.json({ok:true,pushed,pulled,notice:'Upcoming events synchronized using the latest edit. Deletions and all-day events are not synchronized.'});
  }));
  router.post('/gmail/disconnect',route(async(req,res)=>{
   const account=await GmailAccount.findById('personal');let revoked=true;

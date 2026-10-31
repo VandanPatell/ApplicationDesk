@@ -20,6 +20,20 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       TOKEN_ENCRYPTION_KEY: ${TOKEN_ENCRYPTION_KEY:-}
+      AI_PROVIDER: ${AI_PROVIDER:-openai-compatible}
+      AI_BASE_URL: ${AI_BASE_URL:-https://api.openai.com/v1}
+      AI_MODEL: ${AI_MODEL:-}
+      AI_API_KEY: ${AI_API_KEY:-}
+      ADZUNA_APP_ID: ${ADZUNA_APP_ID:-}
+      ADZUNA_APP_KEY: ${ADZUNA_APP_KEY:-}
+      ADZUNA_COUNTRY: ${ADZUNA_COUNTRY:-in}
+      JSEARCH_API_KEY: ${JSEARCH_API_KEY:-}
+      APP_PASSWORD_HASH: ${APP_PASSWORD_HASH:-}
+      APP_SESSION_SECRET: ${APP_SESSION_SECRET:-}
+      BACKUP_DIR: /app/backups
+      TZ: ${TZ:-Asia/Kolkata}
+    volumes:
+      - ./data/backups:/app/backups
     depends_on:
       mongo:
         condition: service_healthy

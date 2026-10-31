@@ -10,7 +10,7 @@ async function request(path,method='GET',data){
  if(!response.ok)throw Error(result.error||'Request failed');return result;
 }
 const size=bytes=>bytes<1024*1024?`${Math.ceil(bytes/1024)} KB`:`${(bytes/1024/1024).toFixed(1)} MB`;
-export default function EmailStudio({templates,jobs,vars,starter,selectedJobId,onSelectJob,onEditTemplate,onVariables,onJobsChanged}){
+export default function EmailStudio({initialAttachmentIds=[],initialDraft='',templates,jobs,vars,starter,selectedJobId,onSelectJob,onEditTemplate,onVariables,onJobsChanged}){
  const jobId=selectedJobId||'';
  const [deleteFile,setDeleteFile]=useState(null);
  const [templateId,setTemplateId]=useState(''),[status,setStatus]=useState(null),[files,setFiles]=useState([]),[attachmentIds,setAttachmentIds]=useState([]),[history,setHistory]=useState([]),[to,setTo]=useState(''),[subject,setSubject]=useState(''),[body,setBody]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState(''),[review,setReview]=useState(null),[mailAppReview,setMailAppReview]=useState(null),[markApplied,setMarkApplied]=useState(true),[acknowledged,setAcknowledged]=useState(false);
@@ -18,6 +18,7 @@ export default function EmailStudio({templates,jobs,vars,starter,selectedJobId,o
  const values={...vars,...(job?{'company-name':job.company,'job-title':job.role,'company-email':job.email||'','job-url':job.url||''}:{})};
  const render=text=>(text||'').replace(/\{\{\s*([\w-]+)\s*\}\}/g,(match,key)=>values[key]?.trim()?values[key]:match);
  useEffect(()=>{setSubject(render(active.subject));setBody(render(active.body));setTo(job?.email||'');setReview(null);},[active._id,active.subject,active.body,jobId,vars]);
+ useEffect(()=>{if(initialAttachmentIds.length)setAttachmentIds(initialAttachmentIds);if(initialDraft){const match=initialDraft.match(/^Subject:\s*(.*)\r?\n+/i);if(match)setSubject(match[1]);setBody(match?initialDraft.slice(match[0].length):initialDraft);}},[jobId,initialAttachmentIds,initialDraft]);
  async function refresh(){const [s,f,h]=await Promise.all([request('gmail/status'),request('attachments'),request('gmail/history')]);setStatus(s);setFiles(f);setHistory(h);setAttachmentIds(ids=>ids.filter(id=>f.some(file=>file._id===id)));}
  useEffect(()=>{refresh().catch(e=>setError(e.message));},[]);
  async function run(fn){setBusy(true);setError('');setNotice('');try{await fn();}catch(e){setError(e.message);}finally{setBusy(false);}}

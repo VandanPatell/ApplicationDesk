@@ -1,6 +1,6 @@
 import React,{useLayoutEffect,useRef} from 'react';
 import ApplicationTimeline from './ApplicationTimeline.jsx';
-import {X,Mail,Pencil,ExternalLink,MapPin,Check,Clock,Trash2} from 'lucide-react';
+import {X,Mail,Pencil,ExternalLink,MapPin,Check,Clock,Trash2,FileText} from 'lucide-react';
 const date=value=>{
  if(!value)return 'Not set';
  const parsed=new Date(value);
@@ -8,7 +8,7 @@ const date=value=>{
 };
 function webLink(value){try{const url=new URL(value);return ['http:','https:'].includes(url.protocol)?url.href:null;}catch{return null;}}
 function Detail({label,children}){return <div className="application-detail"><dt>{label}</dt><dd>{children||'Not specified'}</dd></div>;}
-export default function ApplicationDetails({job,onClose,onEdit,onEmail,onDelete,onSaved}){
+export default function ApplicationDetails({job,onClose,onEdit,onEmail,onDelete,onSaved,onDocuments}){
  const dialog=useRef(null),closeButton=useRef(null);
  useLayoutEffect(()=>{
   const trigger=document.activeElement,previousOverflow=document.body.style.overflow;
@@ -36,6 +36,6 @@ export default function ApplicationDetails({job,onClose,onEdit,onEmail,onDelete,
  <section className="application-detail-section"><h3><Clock size={16}/> Tracking</h3><dl className="application-detail-grid"><Detail label="Applied on">{date(job.appliedAt)}</Detail><Detail label="Follow up on">{date(job.followUpAt)}</Detail><Detail label="Added on">{date(job.createdAt)}</Detail><Detail label="Last updated">{date(job.updatedAt)}</Detail></dl></section>
  <section className="application-detail-section"><h3>Company description</h3><p className={'detail-long-text '+(!job.description?'not-provided':'')}>{job.description||'No company description added yet.'}</p></section>
  <section className="application-detail-section"><h3>Notes</h3><p className={'detail-long-text '+(!job.notes?'not-provided':'')}>{job.notes||'No notes added yet.'}</p></section>
- <ApplicationTimeline key={job._id} job={job} onSaved={onSaved}/><div className="form-footer details-footer"><button className="danger" onClick={onDelete}><Trash2 size={16}/>Delete application</button><div><button className="secondary" onClick={onEdit}><Pencil size={16}/>Edit application</button><button className="primary" onClick={onEmail}><Mail size={16}/>Open in Email studio</button></div></div>
+ {job.statusHistory?.length>0&&<section className="application-detail-section"><h3>Stage history</h3><ol className="conversation-timeline">{[...job.statusHistory].reverse().map((entry,index)=><li key={entry._id||index}><time dateTime={entry.at}>{new Date(entry.at).toLocaleString(undefined,{dateStyle:'medium',timeStyle:'short'})}</time><p>Moved to {entry.status}</p></li>)}</ol></section>}<ApplicationTimeline key={job._id} job={job} onSaved={onSaved}/><div className="career-actions">{onDocuments&&<button className="secondary" onClick={onDocuments}><FileText size={16}/>Resume, cover letter & fit</button>}</div><div className="form-footer details-footer"><button className="danger" onClick={onDelete}><Trash2 size={16}/>Delete application</button><div><button className="secondary" onClick={onEdit}><Pencil size={16}/>Edit application</button><button className="primary" onClick={onEmail}><Mail size={16}/>Open in Email studio</button></div></div>
  </section></div>;
 }

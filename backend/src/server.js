@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { app, Job, Template, Settings } from './app.js';
+import { app, Job, Template, Settings, runScheduledTasks } from './app.js';
 import {initializeDefaults} from './defaults.js';
 import {SentEmail} from './mail.js';
 import {initializeProfileLinks} from './profile-links.js';
@@ -9,5 +9,6 @@ try {
   await initializeProfileLinks(Template,Settings);
   await SentEmail.init();
   await Job.init();
+  setInterval(runScheduledTasks,5*60*1000).unref();
   app.listen(process.env.PORT || 4000,()=>console.log('Application Desk API ready'));
 } catch(error) { console.error('MongoDB connection failed:',error.message); process.exit(1); }

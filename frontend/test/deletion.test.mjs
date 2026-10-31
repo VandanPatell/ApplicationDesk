@@ -40,7 +40,7 @@ test('deleting from details closes every modal, unlocks scrolling, and returns t
   await waitFor(()=>app.deleted===1&&!app.document.querySelector('dialog,.application-details-modal'));
   assert.equal(app.document.body.style.overflow,'');assert.ok(app.document.querySelector('.kanban-board'));
   assert.equal(app.label('View Disposable company — Developer'),null);
-  app.click(app.named('Overview'));await waitFor(()=>app.document.querySelector('h1').textContent.includes('clearer path'));
+  app.click(app.named('Dashboard'));await waitFor(()=>app.document.querySelector('h1').textContent.startsWith('Good '));
  }finally{app.dom.window.close();}
 });
 
