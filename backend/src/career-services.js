@@ -1,19 +1,5 @@
-import PDFDocument from 'pdfkit';
-import {resumeThemes} from './career-domain.js';
-export function pdfBuffer(text,{theme='Classic',color,size=10.5}={}){
- const selected=resumeThemes.find(item=>item.name===theme)||resumeThemes[0];
- const accent=/^#[a-f\d]{6}$/i.test(color||'')?color:selected.color;
- return new Promise((resolve,reject)=>{
-  const doc=new PDFDocument({size:'A4',margin:48,info:{Title:'Application Desk document'}}),chunks=[];
-  doc.on('data',chunk=>chunks.push(chunk));doc.on('end',()=>resolve(Buffer.concat(chunks)));doc.on('error',reject);
-  doc.font(selected.font).fontSize(size).fillColor('#252525');
-  for(const [index,paragraph] of text.split('\n\n').entries()){
-   const heading=index===0||(/^[A-Z &/]+$/.test(paragraph)&&paragraph.length<55);
-   doc.fontSize(index===0?23:heading?13:size).fillColor(heading?accent:'#252525').text(paragraph,{lineGap:3,paragraphGap:8});doc.moveDown(.6);
-  }
-  doc.end();
- });
-}
+import {createResumeLayout,pdfFromLayout} from './resume-layout.js';
+export function pdfBuffer(text,options={}){return pdfFromLayout(createResumeLayout(text,options));}
 export function aiConfiguration(){const provider=process.env.AI_PROVIDER||'openai-compatible';return {provider,configured:!!process.env.AI_MODEL&&(!!process.env.AI_API_KEY||provider==='ollama'),model:process.env.AI_MODEL||'',baseUrl:process.env.AI_BASE_URL||(provider==='ollama'?'http://host.docker.internal:11434/v1':'https://api.openai.com/v1')};}
 export async function askAI(system,prompt,{fetcher=fetch}={}){
  const config=aiConfiguration();if(!config.configured)throw Object.assign(Error('Configure an AI model in your environment first. Profile-based drafts work without AI.'),{status:400});

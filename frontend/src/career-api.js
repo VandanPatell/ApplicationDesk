@@ -1,5 +1,5 @@
-export async function career(path,method='GET',body){
- const response=await fetch('/api/career/'+path,{method,headers:{'X-Requested-With':'ApplicationDesk',...(!(body instanceof FormData)?{'Content-Type':'application/json'}:{})},...(body!==undefined?{body:body instanceof FormData?body:JSON.stringify(body)}:{})});
+export async function career(path,method='GET',body,options={}){
+ const response=await fetch('/api/career/'+path,{method,signal:options.signal,headers:{'X-Requested-With':'ApplicationDesk',...(!(body instanceof FormData)?{'Content-Type':'application/json'}:{})},...(body!==undefined?{body:body instanceof FormData?body:JSON.stringify(body)}:{})});
  let data;try{data=await response.json();}catch{throw Error('The workspace service is unavailable. Please try again.');}
  if(!response.ok)throw Error(data.error||'Unable to complete the request.');return data;
 }

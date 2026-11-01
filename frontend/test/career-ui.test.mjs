@@ -19,6 +19,7 @@ async function workspace(){
   else if(path==='/api/career/interviews'||path==='/api/career/discover')data=[];
   else if(path==='/api/career/preferences'){if(body)preferences=body;data=preferences;}
   else if(path==='/api/career/match')data={score:50,matched:['React'],gaps:['Kubernetes'],method:'Keyword overlap'};
+  else if(path==='/api/career/documents/preview')data={width:595,height:842,pageCount:1,pages:[{operations:[{type:'text',text:'Alex Example',x:40,y:60,font:'LatoBold',size:24,color:'#252525'}]}]};
   else if(path.startsWith('/api/career/documents?'))data=documents;
   else if(path==='/api/career/documents/generate'){documents=(body.jobId?['resume','coverLetter','email']:['resume']).map((kind,index)=>({_id:'document-'+index,kind,title:'Example',jobId:body.jobId||null,content:kind==='email'?'Subject: A considered application\n\nA factual email draft':'Alex Example\n\nSUMMARY\n\nI build internal tools.',theme:'Classic',versions:[{content:'Original version',instruction:'From saved facts',createdAt:new Date().toISOString()}]}));data={documents,match:body.jobId?{score:50,matched:['React'],gaps:['Kubernetes'],method:'Keyword overlap'}:null};}
   else if(path.endsWith('/attach')){const file={_id:'attachment-'+attachments.length,name:'document.pdf',size:1000};attachments.push(file);data=file;}
@@ -38,8 +39,8 @@ test('profile sections expose saved facts and the resume studio creates, themes 
   assert.ok([...app.document.querySelectorAll('input')].some(input=>input.value==='alex@example.com'));
   app.click(app.named('Experience1'));await waitFor(()=>app.document.querySelector('.profile-entry'));assert.match(app.document.querySelector('.profile-entry').textContent,/Developer/);
   app.click(app.named('Base resume'));await waitFor(()=>app.named('Create base resume'));app.click(app.named('Create base resume'));await waitFor(()=>app.document.querySelector('[aria-label="Document content"]'));
-  assert.equal(app.document.querySelectorAll('.theme-grid button').length,12);
-  app.click([...app.document.querySelectorAll('.theme-grid button')].find(button=>button.textContent.endsWith('Forest')));await waitFor(()=>app.document.querySelector('.document-toolbar>span').textContent==='Unsaved changes');
+  app.click(app.named('Change template'));await waitFor(()=>app.document.querySelectorAll('.resume-template-card').length===12);
+  app.click(app.document.querySelector('[aria-label="Use Forest template"]'));await waitFor(()=>app.document.querySelector('.document-toolbar>span').textContent==='Unsaved changes');
   app.click(app.named('Save'));await waitFor(()=>app.document.querySelector('.document-toolbar>span').textContent==='Saved');
   assert.ok(app.requests.some(request=>request.method==='PUT'&&request.body.theme==='Forest'));assert.match(app.document.querySelector('.document-downloads a').getAttribute('href'),/\/pdf$/);
  }finally{app.dom.window.close();}

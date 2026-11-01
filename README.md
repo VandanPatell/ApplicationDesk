@@ -17,7 +17,7 @@ The Dossier-inspired redesign is developed on `codex/dossier-inspired-portal`. A
 - Six editable starter email templates, shared candidate variables, portfolio/resume links, and editable drafts.
 - Optional Gmail OAuth connection, reviewed sending, attachments, and send history.
 - Reusable attachment library, full JSON backup/merge restore, and optional scheduled local backups.
-- Career profile with resume import, document studio, twelve resume themes, revision history, and PDF generation.
+- Career profile with resume import, document studio, eighteen resume templates with six featured layouts, revision history, and PDF generation.
 - Keyword fit/gaps, pasted-posting capture, public job discovery, a daily search agent, interviews and calendar.
 - Optional AI adapters, Gmail inbox linking, Google Calendar synchronization and single-password access.
 - Paper-inspired light/dark workspace with a funnel and weekly activity dashboard.
@@ -299,3 +299,7 @@ For a company that has replied, select its **Received** checkbox and open its de
 Open **Applications** and choose **Kanban** beside **Table**. Drag a card into Saved, Applied, Interview, Offer, Rejected, or Withdrawn to save its stage. The **Move to** menu on each card supports keyboard and touch use. Moving into Applied sets the applied date only if none exists. Your view preference is remembered in this browser.
 
 Search, reply filters, and stage filters apply to both views. Choose **All applications** to see the whole pipeline. Each column shows its matching count and lets you add an application directly into that stage. Select a card's company to view details or use its mail button to open Email studio. Scroll horizontally to reach all six stages.
+
+### Resume designs
+
+Open **Base resume → Change template** to choose Atlas (sidebar), Executive (serif), Swiss (section rail), Studio (masthead), Technical (numbered sections), or Compact. The collection includes 18 templates, category filters, accent colors, and an expandable multi-page A4 preview. Save your changes before downloading a PDF or preparing email attachments. The preview and PDF share pagination and bundled fonts.

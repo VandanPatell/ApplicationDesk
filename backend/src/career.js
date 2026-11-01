@@ -9,6 +9,9 @@ import path from 'node:path';
 import {cleanProfile,profileStrength,matchJob,extractPosting,createDraft,resumeText,resumeThemes,makeCalendar} from './career-domain.js';
 import {pdfBuffer,askAI,aiConfiguration,searchJobs,startupJobs} from './career-services.js';
 import {Attachment,SentEmail} from './mail.js';
+import {createResumeLayout} from './resume-layout.js';
+import {fontFiles} from './resume-templates.js';
+import {fileURLToPath} from 'node:url';
 const mixed=mongoose.Schema.Types.Mixed;
 export const CareerProfile=mongoose.model('CareerProfile',new mongoose.Schema({_id:String,data:mixed},{timestamps:true}));
 export const CareerPreferences=mongoose.model('CareerPreferences',new mongoose.Schema({_id:String,data:mixed},{timestamps:true}));
@@ -43,6 +46,8 @@ export function createCareerRouter({Job,Template,Settings,jobSearch=searchJobs,s
  router.get('/capabilities',(req,res)=>res.json({ai:aiConfiguration(),sources:{remotive:true,hackerNews:true,adzuna:!!(process.env.ADZUNA_APP_ID&&process.env.ADZUNA_APP_KEY),jsearch:!!process.env.JSEARCH_API_KEY},themes:resumeThemes,backups:!!process.env.BACKUP_DIR,authentication:!!process.env.APP_PASSWORD_HASH}));
  router.post('/posting/extract',route(async(req,res)=>{if(typeof req.body.text!=='string'||req.body.text.trim().length<15)throw bad('Paste at least 15 characters from a job posting.');res.json(extractPosting(req.body.text));}));
  router.post('/match',route(async(req,res)=>res.json(matchJob(await profile(),req.body))));
+ router.get('/fonts/:file',(req,res)=>{if(!Object.values(fontFiles).includes(req.params.file))return res.status(404).json({error:'Font not found.'});res.set('Cache-Control','public, max-age=86400').type('font/ttf').sendFile(fileURLToPath(new URL('../assets/fonts/'+req.params.file,import.meta.url)));});
+ router.post('/documents/preview',route(async(req,res)=>{const {content,theme,color,kind}=req.body;res.json(createResumeLayout(content,{theme,color,kind:['resume','coverLetter','email'].includes(kind)?kind:'resume'}));}));
  router.get('/documents',route(async(req,res)=>res.json(await CareerDocument.find(req.query.jobId?{jobId:req.query.jobId==='base'?null:req.query.jobId}:{}).sort({updatedAt:-1}).limit(250))));
  router.post('/documents/generate',route(async(req,res)=>{
   const person=await profile();if(!person.name||(!person.summary&&!person.resumeText&&!person.experience?.length))throw bad('Add your name and a summary, experience, or imported resume in Profile first.');
@@ -54,7 +59,7 @@ export function createCareerRouter({Job,Template,Settings,jobSearch=searchJobs,s
    try{const parsed=JSON.parse(answer.replace(/^```(?:json)?\s*|\s*```$/g,''));for(const kind of ['resume','coverLetter','email'])if(typeof parsed[kind]!=='string'||!parsed[kind].trim())throw Error();draft=parsed;}catch{throw bad('AI returned invalid documents. Try again or use profile-based drafts.');}
   }
   if(draft.email)for(const [label,url] of [['Portfolio',person.website],['Resume',person.resumeUrl]])if(url&&!draft.email.includes(url))draft.email+='\n'+label+': '+url;
-  const documents=await CareerDocument.create(Object.entries(draft).filter(([kind,value])=>['resume','coverLetter','email'].includes(kind)&&typeof value==='string').map(([kind,content])=>({jobId:job?._id||null,kind,title:job?`${job.company} · ${job.role}`:'Base resume',content,theme:req.body.theme||'Classic',versions:[{content,instruction:req.body.useAI?'AI draft — review facts before sending':'Generated from saved profile facts'}]})));
+  const documents=await CareerDocument.create(Object.entries(draft).filter(([kind,value])=>['resume','coverLetter','email'].includes(kind)&&typeof value==='string').map(([kind,content])=>({jobId:job?._id||null,kind,title:job?`${job.company} · ${job.role}`:'Base resume',content,theme:resumeThemes.some(item=>item.name===req.body.theme)?req.body.theme:'Atlas',versions:[{content,instruction:req.body.useAI?'AI draft — review facts before sending':'Generated from saved profile facts'}]})));
   res.status(201).json({documents,match:job?matchJob(person,job):null});
  }));
  router.put('/documents/:id',route(async(req,res)=>{
@@ -77,11 +82,11 @@ export function createCareerRouter({Job,Template,Settings,jobSearch=searchJobs,s
  }));
  router.get('/documents/:id/pdf',route(async(req,res)=>{
   const doc=await CareerDocument.findById(req.params.id);if(!doc)return res.status(404).json({error:'Document not found.'});
-  const data=await pdfBuffer(doc.content,{theme:doc.theme,color:doc.color});res.type('pdf').attachment(`${doc.kind}-${doc._id}.pdf`).send(data);
+  const data=await pdfBuffer(doc.content,{theme:doc.theme,color:doc.color,kind:doc.kind});res.type('pdf').attachment(`${doc.kind}-${doc._id}.pdf`).send(data);
  }));
  router.post('/documents/:id/attach',route(async(req,res)=>{
   const doc=await CareerDocument.findById(req.params.id);if(!doc)return res.status(404).json({error:'Document not found.'});
-  const data=await pdfBuffer(doc.content,{theme:doc.theme,color:doc.color}),name=`${doc.kind}-${doc.title.replace(/[^\w .-]/g,'').slice(0,90)}.pdf`;
+  const data=await pdfBuffer(doc.content,{theme:doc.theme,color:doc.color,kind:doc.kind}),name=`${doc.kind}-${doc.title.replace(/[^\w .-]/g,'').slice(0,90)}.pdf`;
   const attachment=await Attachment.create({name,mimeType:'application/pdf',size:data.length,data});res.status(201).json({_id:attachment._id,name,size:data.length});
  }));
  router.get('/interviews',route(async(req,res)=>res.json(await Interview.find().sort({start:1}))));

@@ -13,7 +13,7 @@ The checkpoint before this work is `29fae15` on `main`. The new work is on `code
 | Next actions and upcoming interviews | Implemented | Local follow-up dates and calendar events |
 | Career profile and strength meter | Implemented | Basics, skills/languages, experience, projects, education, publications, references and section ordering |
 | Import a resume | Implemented for PDF, DOCX, Markdown and text | Extracted text is reviewed before saving; scanned PDFs need external OCR; structured sections remain editable |
-| Base resume and themes | Implemented with twelve font/color themes, accent controls, live preview, theme import/export and server-generated PDFs | The preview and PDF use different renderers; exact pagination may differ. Current PDF standard fonts target Latin-script documents |
+| Base resume and themes | Implemented with eighteen templates including six featured layouts, accent controls, paginated SVG preview matching PDF geometry, theme import/export and server-generated PDFs | Preview and PDF share text positions, wrapping and A4 pagination. Embedded Lato and PT Serif fonts target Latin-script documents |
 | Tailored resume, cover letter and email | Implemented per application from saved profile facts | Default drafting is deterministic and reorders matching skills; it is not an AI-generated eligibility assessment |
 | Fit and gaps | Implemented with transparent keyword overlap | No score if no supported requirements can be identified; not a probability of getting hired |
 | AI generation and refinement | Implemented as optional provider adapters | OpenAI-compatible APIs, Ollama, LM Studio, Mistral or Anthropic; configure your own model and credentials. Review every AI claim |

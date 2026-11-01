@@ -20,7 +20,7 @@ test('posting capture extracts contact, role, work mode and skills for review',(
 test('default tailoring uses profile facts and does not claim missing qualifications',()=>{
  const profile=cleanProfile({name:'Alex',email:'alex@example.com',skills:['React'],summary:'I build web interfaces.',website:'https://example.com',resumeUrl:'https://example.com/resume.pdf'});
  const draft=createDraft(profile,{company:'Acme',role:'Developer',description:'React and Kubernetes'},'Warm');
- assert.match(draft.resume,/Alex/);assert.match(draft.coverLetter,/web interfaces/);assert.ok(!draft.coverLetter.includes('Kubernetes'));assert.match(draft.email,/https:\/\/example.com\/resume.pdf/);assert.equal(resumeThemes.length,12);
+ assert.match(draft.resume,/Alex/);assert.match(draft.coverLetter,/web interfaces/);assert.ok(!draft.coverLetter.includes('Kubernetes'));assert.match(draft.email,/https:\/\/example.com\/resume.pdf/);assert.equal(resumeThemes.length,18);
 });
 test('PDF generation produces a real PDF and calendar exports escape user text',async()=>{
  const buffer=await pdfBuffer('Alex\n\nSUMMARY\n\nWeb developer',{theme:'Forest'});assert.equal(buffer.subarray(0,5).toString(),'%PDF-');assert.ok(buffer.length>500);
