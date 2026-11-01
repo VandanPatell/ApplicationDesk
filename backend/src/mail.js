@@ -1,3 +1,4 @@
+import {dashboardRequestAllowed,requestOriginError} from './request-origin.js';
 import express from 'express';
 import mongoose from 'mongoose';
 import crypto from 'node:crypto';
@@ -18,12 +19,15 @@ export function createMailRouter({Job,oauthFactory,googleFetch=fetch}={}){
  const client=()=>{const c=config();return oauthFactory?oauthFactory():new OAuth2Client(c.id,c.secret,c.origin+'/api/gmail/callback');};
  router.use((req,res,next)=>{
   res.set('Cache-Control','no-store');
-  if(!['GET','HEAD','OPTIONS'].includes(req.method)&&(req.get('X-Requested-With')!=='ApplicationDesk'||(req.get('Origin')&&req.get('Origin')!==config().origin)))return res.status(403).json({error:'This action must be made from the dashboard.'});
+  if(!['GET','HEAD','OPTIONS'].includes(req.method)&&!dashboardRequestAllowed(req))return res.status(403).json({error:requestOriginError(req)});
   next();
  });
  router.get('/gmail/status',route(async(req,res)=>{const account=await GmailAccount.findById('personal').select('email reconnect scopes');res.json({scopes:account?.scopes||[],configured:configured(),connected:!!account&&!account.reconnect&&configured(),email:account?.email||'',reconnect:!!account?.reconnect});}));
  router.post('/gmail/connect',route(async(req,res)=>{
   if(!configured())return res.status(503).json({error:'Gmail setup is required. Follow docs/GMAIL_SETUP.md to configure Google OAuth credentials.'});
+  // OAuth's host-only state cookie must return to the registered callback host.
+  // Ordinary dashboard actions can use loopback aliases, but sign-in uses the canonical URL.
+  if(req.get('Origin')&&new URL(req.get('Origin')).origin!==new URL(config().origin).origin)return res.status(400).json({error:`For Google sign-in, open ${new URL(config().origin).origin} and connect there so the callback can verify your browser.`});
   for(const [key,value] of states)if(value.expires<Date.now())states.delete(key);
   if(states.size>50)return res.status(429).json({error:'Too many connection attempts. Try again later.'});
   const state=crypto.randomBytes(32).toString('hex'),binding=crypto.randomBytes(32).toString('hex');

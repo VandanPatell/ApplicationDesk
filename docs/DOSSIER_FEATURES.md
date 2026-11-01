@@ -100,3 +100,7 @@ docker compose exec -T backend node integration/timeline.mjs
 ```
 
 Integration scripts create uniquely named disposable databases and remove them afterwards. Google integration tests use a fake OAuth/HTTP service; no real Google permissions, requests or emails are used. Frontend tests exercise document creation, theme saving, attachment handoff, navigation, appearance and deletion recovery using an in-memory API. Browser QA uses an isolated database for editable preview data and a read-only pass over the user's actual workspace.
+
+## Local dashboard addresses
+
+Normal dashboard actions accept localhost, 127.0.0.1 and IPv6 loopback on the configured scheme and port. Unrelated origins and other ports are rejected. For a custom development port or hosted address, set APP_ORIGIN accordingly. Google sign-in must start at the exact configured APP_ORIGIN so its host-only state cookie returns to the registered callback host.

@@ -1,3 +1,4 @@
+import {dashboardRequestAllowed,requestOriginError} from './request-origin.js';
 import express from 'express';
 import mongoose from 'mongoose';
 import multer from 'multer';
@@ -17,11 +18,11 @@ export const Discovery=mongoose.model('Discovery',new mongoose.Schema({externalI
 const route=fn=>(req,res,next)=>Promise.resolve(fn(req,res,next)).catch(next);
 const bad=message=>Object.assign(Error(message),{status:400});
 const id=value=>mongoose.isValidObjectId(value);
-export function createCareerRouter({Job,Template,Settings}){
+export function createCareerRouter({Job,Template,Settings,jobSearch=searchJobs,startupSearch=startupJobs}){
  const router=express.Router();
  router.use((req,res,next)=>{
   res.set('Cache-Control','no-store');
-  if(!['GET','HEAD','OPTIONS'].includes(req.method)&&(req.get('X-Requested-With')!=='ApplicationDesk'||(req.get('Origin')&&req.get('Origin')!==(process.env.APP_ORIGIN||'http://localhost:8080'))))return res.status(403).json({error:'Use the dashboard to make changes.'});next();
+  if(!['GET','HEAD','OPTIONS'].includes(req.method)&&!dashboardRequestAllowed(req))return res.status(403).json({error:requestOriginError(req)});next();
  });
  async function profile(){const stored=await CareerProfile.findById('personal');if(stored)return stored.data;const variables=(await Settings.findById('profile'))?.variables;return cleanProfile({name:variables?.get('candidate-name'),email:variables?.get('candidate-email'),website:variables?.get('portfolio-url'),resumeUrl:variables?.get('resume-url'),github:variables?.get('github-url'),skills:variables?.get('skills')?.split(',').map(value=>value.trim())});}
  router.get('/profile',route(async(req,res)=>{const data=await profile();res.json({profile:data,strength:profileStrength(data)});}));
@@ -96,7 +97,7 @@ export function createCareerRouter({Job,Template,Settings}){
  router.get('/calendar.ics',route(async(req,res)=>{res.type('text/calendar').attachment('application-desk-calendar.ics').send(makeCalendar(await Interview.find()));}));
  router.get('/discover',route(async(req,res)=>res.json(await Discovery.find({dismissed:false}).sort({updatedAt:-1}).limit(100))));
  async function discover(input){
-  const person=await profile(),items=input.provider==='hackerNews'?await startupJobs(input.query):await searchJobs(input);
+  const person=await profile(),items=input.provider==='hackerNews'?await startupSearch(input.query):await jobSearch(input);
   for(const data of items){if(!/^https?:\/\//i.test(data.url||''))continue;const match=matchJob(person,data);await Discovery.findOneAndUpdate({externalId:data.externalId},{$set:{data,match}},{upsert:true});}
   return Discovery.find({externalId:{$in:items.map(item=>item.externalId)},dismissed:false}).sort({'match.score':-1});
  }

@@ -1,3 +1,4 @@
+import {dashboardRequestAllowed,requestOriginError} from './request-origin.js';
 import express from 'express';
 import mongoose from 'mongoose';
 import multer from 'multer';
@@ -10,7 +11,7 @@ export function createJobImportRouter({Job}){
  const router=express.Router();
  router.use((req,res,next)=>{
   res.set('Cache-Control','no-store');
-  if(req.method==='POST'&&(req.get('X-Requested-With')!=='ApplicationDesk'||(req.get('Origin')&&req.get('Origin')!==(process.env.APP_ORIGIN||'http://localhost:8080'))))return res.status(403).json({error:'Import applications from the dashboard.'});
+  if(req.method==='POST'&&!dashboardRequestAllowed(req))return res.status(403).json({error:requestOriginError(req)});
   next();
  });
  router.get('/template',(req,res)=>res.download(fileURLToPath(new URL('../assets/job-import-template.xlsx',import.meta.url)),'Application-Desk-Import-Template.xlsx'));
